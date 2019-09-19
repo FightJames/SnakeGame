@@ -17,51 +17,51 @@ class Snake {
 
     fun moveLeft(): Boolean {
         snakeWay = GameView.SnakeWay.LEFT
-        val newPoint = Point(points.last().x - snakeBodyWidth, points.last().y)
         points.poll()
-        Log.d("Left size ", points.size.toString())
+        var newPoint = Point(points.last().x - snakeBodyWidth, points.last().y)
         if (newPoint.x < initX) {
-            points.add(Point(endX, newPoint.y))
-        } else {
-            points.add(newPoint)
+            newPoint = Point(endX, newPoint.y)
         }
-        return hitBody(points.last())
+        val isHitBody = checkPointHitBody(newPoint)
+        Log.d("left ", "${newPoint.toString()} ${points.last()}")
+        points.add(newPoint)
+        return isHitBody
     }
 
     fun moveRight(): Boolean {
         snakeWay = GameView.SnakeWay.RIGHT
-        val newPoint = Point(points.last().x + snakeBodyWidth, points.last().y)
+        var newPoint = Point(points.last().x + snakeBodyWidth, points.last().y)
         points.poll()
         if (newPoint.x > endX) {
-            points.add(Point(initX, newPoint.y))
-        } else {
-            points.add(newPoint)
+            newPoint = Point(initX, newPoint.y)
         }
-        return hitBody(points.last())
+        val isHitBody = checkPointHitBody(newPoint)
+        points.add(newPoint)
+        return isHitBody
     }
 
     fun moveUp(): Boolean {
         snakeWay = GameView.SnakeWay.UP
-        val newPoint = Point(points.last().x, points.last().y - snakeBodyWidth)
+        var newPoint = Point(points.last().x, points.last().y - snakeBodyWidth)
         points.poll()
         if (newPoint.y < initY) {
-            points.add(Point(newPoint.x, endY - snakeBodyWidth))
-        } else {
-            points.add(newPoint)
+            newPoint = Point(newPoint.x, endY - snakeBodyWidth)
         }
-        return hitBody(points.last())
+        val isHitBody = checkPointHitBody(newPoint)
+        points.add(newPoint)
+        return isHitBody
     }
 
     fun moveDown(): Boolean {
         snakeWay = GameView.SnakeWay.DOWN
-        val newPoint = Point(points.last().x, points.last().y + snakeBodyWidth)
+        var newPoint = Point(points.last().x, points.last().y + snakeBodyWidth)
         points.poll()
         if (newPoint.y > endY) {
-            points.add(Point(newPoint.x, initY))
-        } else {
-            points.add(newPoint)
+            newPoint = Point(newPoint.x, initY)
         }
-        return hitBody(points.last())
+        val isHitBody = checkPointHitBody(newPoint)
+        points.add(newPoint)
+        return isHitBody
     }
 
     fun growUpOneBody() {
@@ -84,17 +84,20 @@ class Snake {
         points.add(newPoint)
     }
 
-    fun hitBody(point: Point): Boolean {
+    fun checkPointHitBody(point: Point): Boolean {
         points.forEachIndexed { index, element ->
-            if (index + 3 < points.size) {
-                if (element.x <= point.x && point.x < element.x + snakeBodyWidth
-                    && element.y <= point.y && point.y < element.y + snakeBodyWidth
-                ) {
-                    return true
-                }
-            } else {
-                return@forEachIndexed
+            if (point.isPointOverLap(element, snakeBodyWidth)) {
+                return true
             }
+        }
+        return false
+    }
+
+    fun eatPoint(point: Point): Boolean {
+        val head = points.last()
+        if (checkPointHitBody(point)) {
+            growUpOneBody()
+            return true
         }
         return false
     }

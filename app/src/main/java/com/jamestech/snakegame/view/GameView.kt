@@ -4,20 +4,24 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.os.Handler
 import android.util.AttributeSet
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Toast
+import androidx.core.view.isVisible
 import com.jamestech.snakegame.model.Point
 import com.jamestech.snakegame.model.Snake
 import java.util.*
+import kotlin.random.Random
 
 class GameView : View, GestureDetector.OnGestureListener {
-    private var isFailed = false
     private var paint: Paint = Paint()
     private var priSnakeWay: SnakeWay = SnakeWay.LEFT
+    private val timer = Timer()
+    private var randomPoint: Point? = null
     private val taskQueue: Queue<SnakeWay> by lazy {
         var list = LinkedList<SnakeWay>()
         list.add(SnakeWay.LEFT)
@@ -27,31 +31,30 @@ class GameView : View, GestureDetector.OnGestureListener {
         GestureDetector(this.context, this)
     }
 
-    val snake: Snake by lazy {
+    val snake: Snake =
         Snake().apply {
             snakeWay = priSnakeWay
             points.add(
                 Point(
-                    this@GameView.measuredWidth / 2,
-                    this@GameView.measuredHeight / 2
+                    snakeBodyWidth * 2,
+                    0
                 )
             )
 
             points.add(
                 Point(
-                    this@GameView.measuredWidth / 2 + snakeBodyWidth,
-                    this@GameView.measuredHeight / 2
+                    snakeBodyWidth,
+                    0
+                )
+            )
+            points.add(
+                Point(
+                    0,
+                    0
                 )
             )
 
-            points.add(
-                Point(
-                    this@GameView.measuredWidth / 2 + snakeBodyWidth * 2,
-                    this@GameView.measuredHeight / 2
-                )
-            )
         }
-    }
 
     constructor(context: Context?) : super(context) {
         init()
@@ -84,6 +87,20 @@ class GameView : View, GestureDetector.OnGestureListener {
             Log.d("Hello", " click")
             false
         }
+
+        timer.schedule(object : TimerTask() {
+            override fun run() {
+                this@GameView.handler?.let {
+                    it.post {
+                        if (this@GameView.isVisible) {
+                            invalidate()
+                        }
+                    }
+                } ?: run {
+                    timer.cancel()
+                }
+            }
+        }, 500, 200)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -92,14 +109,38 @@ class GameView : View, GestureDetector.OnGestureListener {
         snake.endY = this.measuredHeight
     }
 
+
     override fun onDraw(canvas: Canvas) {
-        postDelayed({
-            invalidate()
-        }, 500)
+        if (randomPoint == null) {
+            randomPoint = generateRandomPoint()
+            while (snake.checkPointHitBody(randomPoint!!)) {
+                randomPoint = generateRandomPoint()
+            }
+        }
         paint.color = Color.RED
         drawSnake(canvas)
         paint.color = Color.GREEN
+        randomPoint?.apply {
+            canvas.drawRect(
+                x.toFloat(),
+                y.toFloat(),
+                (x + snake.snakeBodyWidth).toFloat(),
+                (y + snake.snakeBodyWidth).toFloat(),
+                paint
+            )
+        }
+        Log.d("eat ", snake.eatPoint(randomPoint!!).toString())
+        Log.d("eat ", "$randomPoint!!")
+        if (snake.eatPoint(randomPoint!!)) {
+            randomPoint = null
+        }
     }
+
+    fun generateRandomPoint(): Point =
+        Point(
+            Random.nextInt(0, measuredWidth - snake.snakeBodyWidth),
+            Random.nextInt(0, measuredHeight - snake.snakeBodyWidth)
+        )
 
     private fun drawSnake(canvas: Canvas) {
         if (taskQueue.isEmpty().not()) {
@@ -131,7 +172,7 @@ class GameView : View, GestureDetector.OnGestureListener {
         }
         if (execute) {
             Toast.makeText(this.context, "Game over", Toast.LENGTH_LONG).show()
-            this.handler.removeCallbacksAndMessages(null)
+            timer.cancel()
         }
     }
 
